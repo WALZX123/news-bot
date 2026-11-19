@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}推送历史 - 新闻机器人{% endblock %}
+{% block page_title %}<i class="bi bi-send"></i> 推送历史{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4>推送历史</h4>
+  <div class="subtitle">共 {{ total }} 次推送 · 情绪分析一览</div>
+</div>
+
+{% if items %}
+<div class="row g-2">
+  {% for item in items %}
+  <div class="col-12 animate-fade-in">
+    <a href="/history/{{ item.id }}" class="text-decoration-none text-reset">
+      <div class="card-bento p-3 d-flex gap-3 align-items-start">
+        <!-- Sentiment icon -->
+        <div class="rounded-3 flex-shrink-0 d-flex align-items-center justify-content-center"
+             style="width:44px; height:44px;
+             {% if '乐观' in item.sentiment or '积极' in item.sentiment %}
+               background: var(--success-light); color: var(--success);
+             {% elif '担忧' in item.sentiment or '悲观' in item.sentiment or '负面' in item.sentiment %}
+               background: var(--danger-light); color: var(--danger);
+             {% else %}
+               background: var(--border-light); color: var(--text-secondary);
+             {% endif %}">
+          <i class="bi {% if '乐观' in item.sentiment or '积极' in item.sentiment %}bi-emoji-smile{% elif '担忧' in item.sentiment or '悲观' in item.sentiment or '负面' in item.sentiment %}bi-emoji-frown{% else %}bi-emoji-neutral{% endif %}" style="font-size:1.1rem;"></i>
+        </div>
+        <div class="flex-grow-1" style="min-width:0;">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fw-semibold" style="font-size:0.88rem;">{{ item.sent_at|display_time('%Y-%m-%d %H:%M') if item.sent_at else '—' }}</span>
+            <span class="badge rounded-pill" style="background: var(--accent); color:#fff;">{{ item.news_count }} 条</span>
+          </div>
+          <div style="font-size:0.8rem; {% if '乐观' in item.sentiment or '积极' in item.sentiment %}color: var(--success);{% elif '担忧' in item.sentiment or '悲观' in item.sentiment or '负面' in item.sentiment %}color: var(--danger);{% else %}color: var(--text-secondary);{% endif %}">
+            {{ item.sentiment[:80] if item.sentiment else '无情感标记' }}
+          </div>
+        </div>
+        <div class="text-secondary flex-shrink-0">
+          <i class="bi bi-chevron-right"></i>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="mt-4 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}"><i class="bi bi-chevron-left"></i></a>
+    </li>
+    {% for p in range([page - 2, 1]|max, [page + 2, total_pages]|min + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}"><i class="bi bi-chevron-right"></i></a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-send"></i></div>
+  <div class="empty-title">暂无推送记录</div>
+  <div class="empty-desc">当 AI 分析完成并通过钉钉推送后，记录将显示在这里。</div>
+  <a href="/news/" class="btn btn-outline-secondary btn-sm">浏览新闻库</a>
+</div>
+{% endif %}
+{% endblock %}

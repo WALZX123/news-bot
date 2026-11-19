@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}源管理 - 新闻机器人{% endblock %}
+{% block page_title %}<i class="bi bi-rss"></i> RSS 源管理{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h4>RSS 源管理</h4>
+    <div class="subtitle">{{ sources|length }} 个配置源 · 请求记录与入库活跃度分别统计；暂无更新也可能是正常空源。</div>
+  </div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSourceModal">
+    <i class="bi bi-plus-lg me-1"></i>添加源
+  </button>
+</div>
+
+<!-- Add Source Modal -->
+{% if health_error %}<div class="alert alert-warning">{{ health_error }}</div>{% endif %}
+<div class="modal fade" id="addSourceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">添加 RSS 源</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="/sources/add">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">源名称</label>
+            <input type="text" class="form-control" name="name" placeholder="如：知乎热榜" maxlength="128" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">RSS URL</label>
+            <input type="url" class="form-control" name="url" placeholder="https://rsshub.app/..." maxlength="2048" required>
+          </div>
+          <div class="text-secondary" style="font-size:0.72rem;">
+            <i class="bi bi-info-circle me-1"></i>新 Web 请求与任务读取新配置；已开始的任务继续使用原配置，调度器需重启。
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary btn-sm">添加</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if sources %}
+<div class="row g-2">
+  {% for s in sources %}
+  <div class="col-12 animate-fade-in">
+    <div class="card-bento p-3">
+      <div class="d-flex align-items-center gap-3">
+        <!-- Health indicator -->
+        <div style="width:12px; height:12px; border-radius:50%; flex-shrink:0;
+          {% if s.health and s.health.last_error %}background: var(--danger);{% elif s.health %}background: var(--success);{% else %}background: #cbd5e1;{% endif %}">
+        </div>
+        <!-- Info -->
+        <div class="flex-grow-1" style="min-width:0;">
+          <div class="fw-semibold" style="font-size:0.88rem;">{{ s.name }}</div>
+          <div class="text-secondary text-truncate font-mono" style="font-size:0.7rem;" title="{{ s.url }}">{{ s.url[:65] }}</div>
+          {% if s.health %}
+          <div class="small text-secondary mt-1">累计：请求成功 {{ s.health.request_success }} · 解析成功 {{ s.health.parse_success }} · 空源 {{ s.health.empty }}</div>
+          <div class="small mt-1 {% if s.health.last_error %}text-danger{% else %}text-secondary{% endif %}">
+            最近请求 {{ s.health.last_attempt|display_time }} · 最近返回 {{ s.health.returned }} 条
+            {% if s.health.last_error %} · 最近错误 {{ s.health.last_error }}{% endif %}
+          </div>
+          {% else %}<div class="small text-secondary mt-1">暂无请求记录；入库数量不能用于判断请求是否成功。</div>{% endif %}
+        </div>
+        <!-- Stats -->
+        <div class="d-flex align-items-center gap-3 flex-shrink-0" style="font-size:0.78rem;">
+          <div class="text-center px-2">
+            <div class="fw-bold">{{ s.total }}</div>
+            <div class="text-secondary" style="font-size:0.62rem;">入库总计</div>
+          </div>
+          <div class="text-center px-2">
+            <div class="fw-bold" style="color: {% if s.recent > 0 %}var(--success){% else %}var(--text-secondary){% endif %};">{{ s.recent }}</div>
+            <div class="text-secondary" style="font-size:0.62rem;">24h</div>
+          </div>
+          <div class="text-center text-secondary" style="font-size:0.65rem; min-width:55px;">
+            {% if s.last_seen %}{{ s.last_seen|display_time('%m-%d') }}{% else %}从未{% endif %}
+          </div>
+        </div>
+        <!-- Actions -->
+        <div class="d-flex gap-1 flex-shrink-0">
+          <form method="POST" action="/sources/test" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="name" value="{{ s.name }}">
+            <input type="hidden" name="url" value="{{ s.url }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="测试抓取"><i class="bi bi-play-fill"></i></button>
+          </form>
+          <form method="POST" action="/sources/remove" class="d-inline" data-remove-source="{{ s.name }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="name" value="{{ s.name }}">
+            <button type="submit" class="btn btn-sm btn-soft-danger" title="移除"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-rss"></i></div>
+  <div class="empty-title">未配置任何 RSS 源</div>
+  <div class="empty-desc">点击右上角「添加源」按钮开始配置，或在系统配置中编辑当前选择的文件。</div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSourceModal">
+    <i class="bi bi-plus-lg me-1"></i>添加第一个源
+  </button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ g.csp_nonce }}">
+document.querySelectorAll('[data-remove-source]').forEach(function(form) {
+  form.addEventListener('submit', function(event) {
+    if (!confirm('确定要从当前选择的配置文件移除「' + form.dataset.removeSource + '」吗？')) {
+      event.preventDefault();
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}新闻机器人{% endblock %}</title>
+  <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Design Tokens
+       ============================================================ */
+    :root {
+      --sidebar-w: 250px;
+      --topbar-h: 54px;
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
+      --transition-smooth: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    [data-theme="light"] {
+      --bg-root: #f1f5f9;
+      --bg-surface: #ffffff;
+      --bg-surface-hover: #f8fafc;
+      --bg-sidebar: #0f172a;
+      --bg-sidebar-hover: rgba(255,255,255,0.06);
+      --bg-sidebar-active: rgba(79,110,247,0.18);
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --text-sidebar: rgba(255,255,255,0.62);
+      --text-sidebar-active: #ffffff;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --accent: #4f6ef7;
+      --accent-light: #eef1ff;
+      --accent-hover: #3d5bd9;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-light: #fffbeb;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --info: #3b82f6;
+      --info-light: #eff6ff;
+      --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow: 0 4px 12px rgba(0,0,0,0.05);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
+    }
+
+    [data-theme="dark"] {
+      --bg-root: #0f172a;
+      --bg-surface: #1e293b;
+      --bg-surface-hover: #273548;
+      --bg-sidebar: #070e18;
+      --bg-sidebar-hover: rgba(255,255,255,0.05);
+      --bg-sidebar-active: rgba(79,110,247,0.22);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-sidebar: rgba(255,255,255,0.52);
+      --text-sidebar-active: #ffffff;
+      --border: #334155;
+      --border-light: #1e293b;
+      --accent: #818cf8;
+      --accent-light: rgba(129,140,248,0.12);
+      --accent-hover: #6366f1;
+      --success: #34d399;
+      --success-light: rgba(52,211,153,0.12);
+      --warning: #fbbf24;
+      --warning-light: rgba(251,191,36,0.12);
+      --danger: #f87171;
+      --danger-light: rgba(248,113,113,0.12);
+      --info: #60a5fa;
+      --info-light: rgba(96,165,250,0.12);
+      --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow: 0 4px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+    }
+
+    /* Reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      background: var(--bg-root);
+      color: var(--text-primary);
+      margin: 0;
+      min-height: 100vh;
+      transition: background var(--transition-smooth), color var(--transition-smooth);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       Sidebar
+       ============================================================ */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--bg-sidebar);
+      z-index: 1040;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+      transition: transform var(--transition-smooth);
+      overflow-y: auto;
+    }
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      text-decoration: none;
+    }
+    .sidebar-brand .brand-icon {
+      width: 38px; height: 38px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #4f6ef7, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-brand .brand-text {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.2px;
+    }
+    .sidebar-brand .brand-version {
+      color: rgba(255,255,255,0.3);
+      font-size: 0.65rem;
+      font-weight: 500;
+      margin-top: -2px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .sidebar-nav .nav-section {
+      color: rgba(255,255,255,0.28);
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 14px 10px 4px;
+    }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--text-sidebar);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+    .sidebar-nav a:hover {
+      color: #fff;
+      background: var(--bg-sidebar-hover);
+    }
+    .sidebar-nav a.active {
+      color: var(--text-sidebar-active);
+      background: var(--bg-sidebar-active);
+      font-weight: 600;
+    }
+    .sidebar-nav a i {
+      font-size: 1.05rem;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 10px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ============================================================
+       Topbar
+       ============================================================ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      height: var(--topbar-h);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+    }
+    .topbar .btn-icon {
+      width: 34px; height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all var(--transition-fast);
+    }
+    .topbar .btn-icon:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-primary);
+    }
+    .topbar .topbar-title {
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ============================================================
+       Main content area
+       ============================================================ */
+    .main-wrapper {
+      margin-left: var(--sidebar-w);
+      min-height: 100vh;
+      transition: margin-left var(--transition-smooth);
+    }
+    .main-content {
+      padding: 22px;
+      max-width: 1400px;
+    }
+
+    /* ============================================================
+       Theme toggle
+       ============================================================ */
+    .theme-toggle {
+      width: 34px; height: 34px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      transition: all var(--transition-fast);
+    }
+    .theme-toggle:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+    [data-theme="dark"] .theme-toggle .icon-light { display: inline; }
+    [data-theme="dark"] .theme-toggle .icon-dark { display: none; }
+    [data-theme="light"] .theme-toggle .icon-light { display: none; }
+    [data-theme="light"] .theme-toggle .icon-dark { display: inline; }
+
+    /* ============================================================
+       Cards
+       ============================================================ */
+    .card-bento {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-xs);
+      transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+    }
+    .card-bento:hover {
+      box-shadow: var(--shadow);
+      border-color: var(--accent);
+      border-color: rgba(79,110,247,0.2);
+    }
+    .card-bento .card-header-bento {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 10px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-light);
+    }
+    .card-bento .card-body-bento { padding: 18px; }
+    .card-bento .card-body-flush { padding: 0; }
+
+    /* Stat cards — always equal height in a .row */
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-xs);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      height: 100%;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .stat-card .stat-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .stat-card .stat-body { flex: 1; min-width: 0; }
+    .stat-card .stat-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      color: var(--text-primary);
+    }
+    .stat-card .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+    .stat-card .stat-sub {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       Buttons
+       ============================================================ */
+    .btn { border-radius: var(--radius-sm); font-weight: 500; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn-outline-secondary {
+      border-color: var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-outline-secondary:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-primary);
+      border-color: var(--text-secondary);
+    }
+    .btn-soft-danger {
+      color: var(--danger);
+      background: var(--danger-light);
+      border: 1px solid transparent;
+    }
+    .btn-soft-danger:hover { background: var(--danger); color: #fff; }
+
+    /* ============================================================
+       Badges
+       ============================================================ */
+    .badge { font-weight: 500; padding: 0.3em 0.65em; border-radius: 5px; }
+    .badge-soft-success {
+      color: #059669; background: #ecfdf5;
+      border: 1px solid rgba(16,185,129,0.12);
+    }
+    .badge-soft-warning {
+      color: #d97706; background: #fffbeb;
+      border: 1px solid rgba(245,158,11,0.12);
+    }
+    .badge-soft-danger {
+      color: #dc2626; background: #fef2f2;
+      border: 1px solid rgba(239,68,68,0.12);
+    }
+    [data-theme="dark"] .badge-soft-success { color: #34d399; background: rgba(52,211,153,0.15); }
+    [data-theme="dark"] .badge-soft-warning { color: #fbbf24; background: rgba(251,191,36,0.15); }
+    [data-theme="dark"] .badge-soft-danger { color: #f87171; background: rgba(248,113,113,0.15); }
+
+    /* ============================================================
+       Page header
+       ============================================================ */
+    .page-header { margin-bottom: 18px; }
+    .page-header h4 { font-weight: 700; letter-spacing: -0.2px; margin: 0; font-size:1.25rem; }
+    .page-header .subtitle { color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px; }
+
+    /* ============================================================
+       Empty state
+       ============================================================ */
+    .empty-state {
+      text-align: center;
+      padding: 56px 20px;
+      color: var(--text-secondary);
+      background: var(--bg-surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-state .empty-icon { font-size: 3rem; color: var(--border); margin-bottom: 14px; }
+    .empty-state .empty-title { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; margin-bottom: 4px; }
+    .empty-state .empty-desc { font-size: 0.8rem; max-width: 360px; margin: 0 auto 18px; line-height: 1.5; }
+
+    /* ============================================================
+       Forms
+       ============================================================ */
+    .form-control, .form-select {
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      transition: all var(--transition-fast);
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .form-control::placeholder { color: var(--text-secondary); opacity: 0.5; }
+
+    /* ============================================================
+       Pagination
+       ============================================================ */
+    .pagination .page-link {
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      margin: 0 1px;
+      font-size: 0.85rem;
+      transition: all var(--transition-fast);
+    }
+    .pagination .page-link:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+    .pagination .active .page-link { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ============================================================
+       Progress
+       ============================================================ */
+    .progress { height: 6px; background: var(--border-light); border-radius: 3px; }
+    .progress-bar { border-radius: 3px; }
+
+    /* ============================================================
+       Alerts / Modal
+       ============================================================ */
+    .alert { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); }
+    .modal-content { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+
+    /* ============================================================
+       Animations (short, subtle — no layout shift)
+       ============================================================ */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fade-in { animation: fadeIn 0.25s ease-out both; }
+
+    /* ============================================================
+       Responsive
+       ============================================================ */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1035;
+    }
+    @media (max-width: 991.98px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-backdrop.show { display: block; }
+      .main-wrapper { margin-left: 0 !important; }
+      .topbar { padding: 0 14px; }
+      .main-content { padding: 14px; }
+    }
+
+    /* ============================================================
+       Utilities
+       ============================================================ */
+    .text-secondary { color: var(--text-secondary) !important; }
+    .font-mono { font-family: 'Cascadia Code', 'Consolas', 'SF Mono', monospace; }
+    .text-truncate-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .cursor-pointer { cursor: pointer; }
+    .link-muted { color: var(--text-secondary); text-decoration: none; transition: color var(--transition-fast); }
+    .link-muted:hover { color: var(--accent); }
+
+    pre.json-view {
+      max-height: 500px;
+      overflow-y: auto;
+      background: var(--bg-root);
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.76rem;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+{% set is_auth = session.get("authenticated") %}
+
+{% if is_auth %}
+<div class="sidebar-backdrop" id="sidebarBackdrop" data-sidebar-close></div>
+
+<aside class="sidebar" id="sidebar">
+  <a href="/" class="sidebar-brand">
+    <div class="brand-icon"><i class="bi bi-newspaper"></i></div>
+    <div>
+      <div class="brand-text">新闻机器人</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">主导航</div>
+    <a href="/" class="{% if request.path == '/' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i> 仪表盘
+    </a>
+    <a href="/news/" class="{% if request.path.startswith('/news') %}active{% endif %}">
+      <i class="bi bi-newspaper"></i> 新闻管理
+    </a>
+    <a href="/sources/" class="{% if request.path.startswith('/sources') %}active{% endif %}">
+      <i class="bi bi-rss"></i> 源管理
+    </a>
+    <a href="/history/" class="{% if request.path.startswith('/history') %}active{% endif %}">
+      <i class="bi bi-send"></i> 推送历史
+    </a>
+    <a href="/reports/" class="{% if request.path.startswith('/reports') %}active{% endif %}">
+      <i class="bi bi-graph-up"></i> 分析报告
+    </a>
+    <div class="nav-section">系统</div>
+    <a href="/config/" class="{% if request.path.startswith('/config') %}active{% endif %}">
+      <i class="bi bi-gear"></i> 系统配置
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <form method="POST" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;background:transparent;border-radius:8px;color:var(--text-sidebar);font-size:0.85rem;">
+        <i class="bi bi-box-arrow-right"></i> 登出
+      </button>
+    </form>
+  </div>
+</aside>
+{% endif %}
+
+<div class="main-wrapper" style="margin-left: {% if is_auth %}var(--sidebar-w){% else %}0{% endif %};">
+  {% if is_auth %}
+  <div class="topbar">
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn-icon d-lg-none" data-sidebar-toggle aria-label="展开导航"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="text-secondary small">北京时间</span>
+      <button class="theme-toggle" data-theme-toggle title="切换深浅色">
+        <i class="bi bi-sun-fill icon-light"></i>
+        <i class="bi bi-moon-fill icon-dark"></i>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 border-0 shadow-sm animate-fade-in" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script defer src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  try {
+    var saved = localStorage.getItem('newsbot-theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  } catch (error) { /* Theme persistence is optional when browser storage is disabled. */ }
+  document.querySelectorAll('[data-theme-toggle]').forEach(function(button) {
+    button.addEventListener('click', toggleTheme);
+  });
+  document.querySelectorAll('[data-sidebar-toggle]').forEach(function(button) {
+    button.addEventListener('click', toggleSidebar);
+  });
+  document.querySelectorAll('[data-sidebar-close]').forEach(function(button) {
+    button.addEventListener('click', closeSidebar);
+  });
+})();
+function toggleTheme() {
+  var html = document.documentElement;
+  var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  try { localStorage.setItem('newsbot-theme', next); } catch (error) { /* optional */ }
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

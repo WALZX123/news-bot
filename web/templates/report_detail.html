@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ item.title[:50] }}{% endblock %}
+{% block page_title %}<i class="bi bi-graph-up"></i> 报告详情{% endblock %}
+
+{% block content %}
+<a href="/reports/" class="btn btn-sm btn-outline-secondary mb-3 rounded-pill">
+  <i class="bi bi-arrow-left me-1"></i>返回报告列表
+</a>
+
+<div class="card-bento mb-3 animate-fade-in">
+  <div class="card-body-bento p-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="badge" style="background: var(--accent);">{{ item.type_label }}</span>
+      <span class="text-secondary" style="font-size:0.85rem;">{{ item.period_start }} ~ {{ item.period_end }}（不含止日）</span>
+      <span class="text-secondary" style="font-size:0.85rem;">{{ item.news_count }} 条新闻</span>
+    </div>
+    <h4 class="fw-bold">{{ item.title }}</h4>
+
+    <div class="alert alert-warning mt-3" role="note">
+      {% if content._coverage %}
+      <div>当前留存 {{ content._coverage.available_news }} 条 · 分析样本 {{ content._coverage.sampled_news }} 条</div>
+      <div>{{ content._coverage.note }}</div>
+      {% else %}
+      <div>本报告未记录资料覆盖与采样信息，不能据此认定已完整覆盖该周期。</div>
+      {% endif %}
+      <div>旧版已删除的历史不会因本次修复恢复；缺失资料需从已有备份或其他原始来源补齐。</div>
+    </div>
+
+    {% if content.summary %}
+    <div class="p-4 rounded-3 mt-3" style="background: var(--bg-root); line-height:1.8;">{{ content.summary }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if content.top_events %}
+<div class="card-bento mb-3 animate-fade-in">
+  <div class="card-header-bento fw-bold">TOP 事件</div>
+  <div class="card-body-bento">
+    {% for e in content.top_events %}
+    <div class="d-flex gap-2 mb-3 {% if not loop.last %}pb-3 border-bottom{% endif %}" style="border-color: var(--border-light);">
+      <span class="badge rounded-pill flex-shrink-0" style="background: var(--text-primary); height:fit-content;">{{ e.rank }}</span>
+      <div>
+        <div class="fw-semibold">{{ e.event }}</div>
+        <div class="text-secondary mt-1" style="font-size:0.82rem;">{{ e.significance }}</div>
+        {% if e.evolution %}<div class="mt-1" style="font-size:0.82rem;"><span class="text-secondary">发展：</span>{{ e.evolution }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if content.domain_analysis %}
+<div class="card-bento mb-3 animate-fade-in">
+  <div class="card-header-bento fw-bold">领域分析</div>
+  <div class="card-body-bento">
+    <div class="accordion" id="domainAccordion">
+      {% for domain, text in content.domain_analysis.items() %}
+      <div class="accordion-item border-0 mb-2" style="background:transparent;">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#d{{ loop.index }}" style="font-size:0.9rem; background: var(--bg-root); color: var(--text-primary);">
+            {{ domain }}
+          </button>
+        </h2>
+        <div id="d{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#domainAccordion">
+          <div class="accordion-body" style="font-size:0.88rem; line-height:1.8;">{{ text }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if content.trends %}
+<div class="card-bento mb-3 animate-fade-in">
+  <div class="card-header-bento fw-bold">跨领域趋势</div>
+  <div class="card-body-bento">
+    <ol class="mb-0" style="font-size:0.9rem; line-height:1.8;">
+      {% for t in content.trends %}<li class="mb-2">{{ t }}</li>{% endfor %}
+    </ol>
+  </div>
+</div>
+{% endif %}
+
+{% if content.outlook %}
+<div class="card-bento mb-3 animate-fade-in">
+  <div class="card-header-bento fw-bold">下期展望</div>
+  <div class="card-body-bento">
+    <div class="p-3 rounded-3" style="background: var(--bg-root); font-size:0.9rem; line-height:1.8;">{{ content.outlook }}</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card-bento animate-fade-in">
+  <div class="card-header-bento cursor-pointer" data-bs-toggle="collapse" data-bs-target="#rawJson" role="button">
+    原始数据 <i class="bi bi-chevron-down ms-auto"></i>
+  </div>
+  <div class="collapse" id="rawJson">
+    <div class="card-body-flush">
+      <pre class="json-view m-0 border-0 rounded-0 rounded-bottom">{{ content | tojson(indent=2) }}</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

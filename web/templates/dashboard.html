@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 新闻机器人{% endblock %}
+{% block page_title %}<i class="bi bi-speedometer2"></i> 仪表盘{% endblock %}
+
+{% block content %}
+
+<!-- Stat cards — always equal height via row > col-* > h-100 -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon-wrap" style="background: var(--accent-light); color: var(--accent);"><i class="bi bi-archive"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ total_news }}</div>
+        <div class="stat-label">新闻总数</div>
+        <div class="stat-sub">数据库累计</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon-wrap" style="background: var(--success-light); color: var(--success);"><i class="bi bi-calendar-check"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ today_news }}</div>
+        <div class="stat-label">今日新增</div>
+        <div class="stat-sub">{{ "活跃中" if today_news > 0 else "暂无" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon-wrap" style="background: var(--warning-light); color: var(--warning);"><i class="bi bi-inbox"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ unnotified }}</div>
+        <div class="stat-label">待推送</div>
+        <div class="stat-sub">{{ "有积攒" if unnotified > 20 else "正常" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon-wrap" style="background: var(--info-light); color: var(--info);"><i class="bi bi-send"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ total_pushes }}</div>
+        <div class="stat-label">累计推送</div>
+        <div class="stat-sub">{% if last_run %}最近 {{ last_run|display_time('%m-%d %H:%M') }}{% else %}暂无记录{% endif %}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-8">
+    <div class="card-bento">
+      <div class="card-header-bento">
+        <span><i class="bi bi-bar-chart me-2"></i>每日采集趋势（近7天）</span>
+        <span class="text-secondary" style="font-size:0.7rem;">{{ source_total }} 条</span>
+      </div>
+      <div class="card-body-bento" style="position:relative; height:260px;">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card-bento h-100">
+      <div class="card-header-bento">
+        <span><i class="bi bi-pie-chart me-2"></i>来源分布 TOP10</span>
+      </div>
+      <div class="card-body-bento d-flex align-items-center" style="position:relative; height:260px;">
+        <canvas id="sourcePieChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Source health + quick actions -->
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card-bento">
+      <div class="card-header-bento">
+        <span><i class="bi bi-rss me-2"></i>来源活跃度（近7天）</span>
+        <span class="text-secondary" style="font-size:0.7rem;">{{ source_stats|length }} 个源</span>
+      </div>
+      <div class="card-body-flush">
+        {% if source_stats %}
+        {% for s in source_stats %}
+        <div class="d-flex align-items-center px-3 py-2 border-bottom" style="border-color: var(--border-light);">
+          <div style="width:100px;"><span class="fw-semibold" style="font-size:0.83rem;">{{ s.source }}</span></div>
+          <div class="flex-grow-1 mx-3">
+            <div class="progress" style="height:5px;">
+              {% set pct = (s.cnt / source_total * 100) if source_total > 0 else 0 %}
+              <div class="progress-bar {% if pct > 10 %}bg-primary{% elif pct > 4 %}bg-warning{% else %}bg-secondary opacity-50{% endif %}"
+                   style="width: {{ pct|round(1) }}%;"></div>
+            </div>
+          </div>
+          <div class="text-end" style="width:60px;"><span class="fw-semibold" style="font-size:0.83rem;">{{ s.cnt }}</span></div>
+          <div class="text-secondary ms-2" style="font-size:0.68rem; width:50px; text-align:right;">{{ s.last_seen|display_time('%m-%d') if s.last_seen else '—' }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4 text-secondary" style="font-size:0.82rem;">暂无数据</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card-bento mb-3">
+      <div class="card-header-bento"><i class="bi bi-lightning-charge me-2"></i>快捷操作</div>
+      <div class="card-body-bento">
+        <div class="d-grid gap-2">
+          <button class="btn btn-outline-secondary btn-sm" data-job-action="fetch" id="btn-fetch">
+            <i class="bi bi-download me-1"></i>立即抓取 RSS
+          </button>
+          <button class="btn btn-primary btn-sm" data-job-action="analyze" id="btn-analyze">
+            <i class="bi bi-cpu me-1"></i>抓取 + AI 分析 + 推送
+          </button>
+        </div>
+        <div id="job-status" class="mt-2 small text-center" role="status" aria-live="polite"></div>
+        <button id="job-retry" type="button" class="btn btn-outline-secondary btn-sm mt-2" hidden>重新查询任务状态</button>
+      </div>
+    </div>
+
+    <div class="card-bento">
+      <div class="card-header-bento">
+        <span><i class="bi bi-clock-history me-2"></i>最近推送</span>
+        <a href="/history/" class="link-muted" style="font-size:0.7rem;">查看全部</a>
+      </div>
+      <div class="card-body-flush">
+        {% if recent_pushes %}
+        {% for p in recent_pushes %}
+        <a href="/history/{{ p.id }}" class="text-decoration-none text-reset d-block px-3 py-2 border-bottom" style="border-color: var(--border-light);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-semibold" style="font-size:0.83rem;">{{ p.sent_at|display_time('%m-%d %H:%M') if p.sent_at else '—' }}</span>
+            <span class="badge rounded-pill" style="background: var(--accent); color:#fff; font-size:0.7rem;">{{ p.news_count }} 条</span>
+          </div>
+          <div style="font-size:0.75rem; {% if '乐观' in p.sentiment or '积极' in p.sentiment %}color: var(--success);{% elif '担忧' in p.sentiment or '悲观' in p.sentiment or '负面' in p.sentiment %}color: var(--danger);{% else %}color: var(--text-secondary);{% endif %}">
+            {{ p.sentiment[:45] if p.sentiment else '无情感标记' }}
+          </div>
+        </a>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4 text-secondary" style="font-size:0.82rem;"><i class="bi bi-inbox d-block mb-1" style="font-size:1.3rem;"></i>暂无推送记录</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ url_for('static', filename='vendor/chart/chart.umd.min.js') }}"></script>
+<script id="dashboard-data" type="application/json" nonce="{{ g.csp_nonce }}">{{ {'daily_labels': daily_labels, 'daily_values': daily_values, 'source_total_rows': source_total_rows, 'csrf_token': csrf_token()}|tojson }}</script>
+<script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}

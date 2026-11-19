@@ -1,0 +1,39 @@
+﻿{% extends "base.html" %}
+{% block title %}配置 - 新闻机器人{% endblock %}
+{% block page_title %}<i class="bi bi-gear"></i> 系统配置{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h4>系统配置</h4>
+    <div class="subtitle">只读视图 · 密钥已脱敏</div>
+  </div>
+  <a href="/config/edit" class="btn btn-outline-secondary btn-sm rounded-pill">
+    <i class="bi bi-pencil me-1"></i>编辑 YAML
+  </a>
+</div>
+
+{% for section_title, rows in sections.items() %}
+<div class="card-bento mb-3 animate-fade-in" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+  <div class="card-header-bento">{{ section_title }}</div>
+  <div class="card-body-flush">
+    {% for key, value in rows %}
+    <div class="d-flex px-4 py-3 {% if not loop.last %}border-bottom{% endif %}" style="border-color: var(--border-light);">
+      <div class="fw-medium text-secondary" style="width:180px; font-size:0.82rem;">{{ key }}</div>
+      <div class="fw-semibold" style="font-size:0.85rem;">
+        {% if '****' in value %}
+        <span class="font-mono">{{ value }}</span>
+        {% else %}
+        <span>{{ value }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="text-secondary mt-3" style="font-size:0.8rem;">
+  <i class="bi bi-info-circle me-1"></i>密钥类配置已脱敏显示。修改配置请点击右上角「编辑 YAML」。
+</div>
+{% endblock %}

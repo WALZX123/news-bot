@@ -1,0 +1,35 @@
+﻿{% extends "base.html" %}
+{% block title %}编辑配置 - 新闻机器人{% endblock %}
+{% block page_title %}<i class="bi bi-pencil"></i> 编辑配置{% endblock %}
+
+{% block content %}
+<a href="/config/" class="btn btn-sm btn-outline-secondary mb-3 rounded-pill">
+  <i class="bi bi-arrow-left me-1"></i>返回配置
+</a>
+
+<div class="card-bento mb-3" style="border-left: 4px solid var(--warning);">
+  <div class="card-body-bento py-2 px-3" style="font-size:0.82rem;">
+    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+    编辑当前选择的配置文件。保存前验证语义并创建备份；并发修改时请重新加载。敏感字段已隐藏，请保留占位符，并通过本地私密文件或环境变量修改凭据。保存保留提交的注释与排版；锚点、别名和多行敏感字段需在本地私密配置中处理。新请求、新任务和调度器下一轮读取新配置；环境变量和日志设置变更需重启对应进程。
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger rounded-3 border-0 shadow-sm animate-fade-in"><strong>错误:</strong> {{ error }}</div>
+{% endif %}
+
+<div class="card-bento animate-fade-in">
+  <div class="card-header-bento fw-bold">当前选择的配置文件</div>
+  <div class="card-body-bento">
+    <form method="POST" action="/config/edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="version" value="{{ version }}">
+      <textarea class="form-control font-mono rounded-3" name="yaml_content" rows="28" style="font-size:0.82rem; background: var(--bg-root);" spellcheck="false">{{ raw_yaml }}</textarea>
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>验证并保存</button>
+        <a href="/config/" class="btn btn-outline-secondary">取消</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
