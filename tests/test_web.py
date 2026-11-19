@@ -487,7 +487,7 @@ async function scenario(status, errorMode) {
         self.login(client)
         health = {'example':{'request_success':12,'parse_success':11,'empty':3,
                   'last_error':'<b>parse</b>','last_attempt':'2026-11-17T00:00:00+00:00','returned':0}}
-        expected_path = str(self.path.parent/'runtime'/'source-health.sqlite3')
+        expected_path = (self.path.parent / 'runtime' / 'source-health.sqlite3').resolve()
         with patch('src.fetcher.get_source_health',return_value=health) as read_health, \
              patch('src.fetcher.fetch_source',return_value=[]) as fetch:
             body = client.get('/sources/').get_data(as_text=True)
@@ -496,13 +496,16 @@ async function scenario(status, errorMode) {
             self.assertIn('空源 3',body)
             self.assertIn('&lt;b&gt;parse&lt;/b&gt;',body)
             self.assertNotIn('<b>parse</b>',body)
-            read_health.assert_called_with(health_path=expected_path)
+            read_health.assert_called_once()
+            self.assertEqual(expected_path, Path(read_health.call_args.kwargs['health_path']).resolve())
             response = client.post('/sources/test',data={'name':'example','url':'https://example.org/rss',
                                    'csrf_token':self.auth_token(client)})
             self.assertEqual(response.status_code,200)
             self.assertIn('请求与解析成功',response.get_data(as_text=True))
-            self.assertEqual(fetch.call_args.kwargs,{'allow_private_hosts':['127.0.0.1'],
-                'max_news_age_hours':36,'max_response_bytes':1048576,'task_timeout':45,'health_path':expected_path})
+            fetch_options = dict(fetch.call_args.kwargs)
+            self.assertEqual(expected_path, Path(fetch_options.pop('health_path')).resolve())
+            self.assertEqual(fetch_options, {'allow_private_hosts':['127.0.0.1'],
+                'max_news_age_hours':36,'max_response_bytes':1048576,'task_timeout':45})
 
     def test_database_config_refresh_reuses_one_app_storage_after_switch(self):
         client = self.client()
